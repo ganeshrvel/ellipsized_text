@@ -18,20 +18,22 @@ class EllipsizedText extends LeafRenderObjectWidget {
   /// [textScaleFactor] Text scale factor.
   /// [textWidthBasis] Text width basis.
   /// [textHeightBehavior] Text height behavior.
+  /// [onTruncated] Fired after layout with whether the text was shortened.
   const EllipsizedText(
-    this.text, {
-    super.key,
-    this.type = EllipsisType.end,
-    this.ellipsis = "...",
-    this.style,
-    this.strutStyle,
-    this.textAlign,
-    this.textDirection,
-    this.locale,
-    this.textScaler,
-    this.textWidthBasis,
-    this.textHeightBehavior,
-  });
+      this.text, {
+        super.key,
+        this.type = EllipsisType.end,
+        this.ellipsis = "...",
+        this.style,
+        this.strutStyle,
+        this.textAlign,
+        this.textDirection,
+        this.locale,
+        this.textScaler,
+        this.textWidthBasis,
+        this.textHeightBehavior,
+        this.onTruncated,
+      });
 
   /// Text that will shrink into three dots when it reaches a larger size.
   final String text;
@@ -66,6 +68,12 @@ class EllipsizedText extends LeafRenderObjectWidget {
   /// Text height behavior.
   final ui.TextHeightBehavior? textHeightBehavior;
 
+  /// Fired after layout completes, reporting whether the rendered text was
+  /// shortened to fit the available width.
+  /// The value is true when characters were dropped and the ellipsis inserted.
+  /// Fires on a post-frame callback and only when the value changes.
+  final ValueChanged<bool>? onTruncated;
+
   @override
   RenderObject createRenderObject(BuildContext context) =>
       EllipsizedTextRenderObject()
@@ -76,9 +84,9 @@ class EllipsizedText extends LeafRenderObjectWidget {
 
   @override
   void updateRenderObject(
-    BuildContext context,
-    EllipsizedTextRenderObject renderObject,
-  ) =>
+      BuildContext context,
+      EllipsizedTextRenderObject renderObject,
+      ) =>
       renderObject.render(
         context,
         this,

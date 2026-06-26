@@ -1,12 +1,17 @@
 import 'package:ellipsized_text/src/ellipsized_text.dart';
 import 'package:ellipsized_text/src/ellipsis_type.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 
 class EllipsizedTextRenderObject extends RenderBox {
   TextPainter _textPainter = TextPainter();
   BoxConstraints _constraints = const BoxConstraints();
   EllipsizedText _widget = const EllipsizedText("");
   bool _widgetChanged = false;
+
+  /// Last reported truncation state, used to suppress duplicate callbacks.
+  /// Null until the first layout reports a value.
+  bool? _lastTruncated;
 
   void render(
     BuildContext context,
@@ -18,6 +23,23 @@ class EllipsizedTextRenderObject extends RenderBox {
         this._widget.style == widget.style &&
         this._widget.textAlign == widget.textAlign &&
         this._widget.textDirection == widget.textDirection) {
+      // The callback reference is refreshed even when layout inputs are
+      // unchanged so a rebuilt parent always holds the current closure.
+      this._widget = EllipsizedText(
+        this._widget.text,
+        key: this._widget.key,
+        type: this._widget.type,
+        ellipsis: this._widget.ellipsis,
+        style: this._widget.style,
+        strutStyle: this._widget.strutStyle,
+        textAlign: this._widget.textAlign,
+        textDirection: this._widget.textDirection,
+        locale: this._widget.locale,
+        textScaler: this._widget.textScaler,
+        textWidthBasis: this._widget.textWidthBasis,
+        textHeightBehavior: this._widget.textHeightBehavior,
+        onTruncated: widget.onTruncated,
+      );
       return;
     }
 
@@ -73,6 +95,7 @@ class EllipsizedTextRenderObject extends RenderBox {
       textWidthBasis: widget.textWidthBasis ?? defaultTextStyle.textWidthBasis,
       textHeightBehavior:
           widget.textHeightBehavior ?? defaultTextStyle.textHeightBehavior,
+      onTruncated: widget.onTruncated,
     );
     this._widgetChanged = true;
     super.markNeedsLayout();
@@ -149,11 +172,17 @@ class EllipsizedTextRenderObject extends RenderBox {
   }) {
     final String text = this._widget.text;
 
+    // The full string fitting within maxWidth means no characters were
+    // dropped; overflow drives the binary search and marks truncation.
+    bool truncated = false;
+
     if (this._layoutText(
           length: text.length,
           minWidth: minWidth,
         ) >
         maxWidth) {
+      truncated = true;
+
       int left = 0;
       int right = text.length - 1;
 
@@ -175,12 +204,37 @@ class EllipsizedTextRenderObject extends RenderBox {
       );
     }
 
+    this._reportTruncation(truncated);
+
     final Size size = Size(
       this._textPainter.width,
       this._textPainter.height,
     );
 
     return this.constraints.constrain(size);
+  }
+
+  /// Schedules the truncation callback on the next frame when the value
+  /// differs from the last reported state.
+  /// Deferral avoids mutating the widget tree during layout, and the equality
+  /// guard prevents a rebuild-relayout-callback loop.
+  void _reportTruncation(bool truncated) {
+    if (this._lastTruncated == truncated) {
+      return;
+    }
+    this._lastTruncated = truncated;
+
+    final ValueChanged<bool>? callback = this._widget.onTruncated;
+    if (callback == null) {
+      return;
+    }
+
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      if (this.attached == false) {
+        return;
+      }
+      callback(truncated);
+    });
   }
 
   @override
