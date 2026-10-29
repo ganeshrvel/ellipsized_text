@@ -1,6 +1,6 @@
 import 'package:ellipsized_text/src/ellipsized_text.dart';
 import 'package:ellipsized_text/src/ellipsis_type.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/scheduler.dart';
 
 class EllipsizedTextRenderObject extends RenderBox {

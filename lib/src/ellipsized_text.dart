@@ -1,6 +1,6 @@
 import 'package:ellipsized_text/src/ellipsized_text_render_object.dart';
 import 'package:ellipsized_text/ellipsized_text.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'dart:ui' as ui show TextHeightBehavior;
 
